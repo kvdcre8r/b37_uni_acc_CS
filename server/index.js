@@ -1,15 +1,32 @@
-// imports for express and pg
+// import for express
 const express = require("express");
+//creating an instance of express && calling it app;
 const app = express();
-const path = require("path");
-const pg = require("pg");
 
-// static routes
-const client = new pg.Client(
-  process.env.DATABASE_URL || "postgres://localhost/acme_geek_supply_db"
-);
+//import path module, to join directories
+const path = require("path");
+
+//CLIENT
+const client = require('./client.js')
+
+//SCHEMA
+const SCHEMA = require('./schema.js')
+
+//SEED FC
+const seedDb = require('./seedDb.js');
+
+
+
+
+
+
+//SERVICES
+const {fetchUsers} = require('./service/userService.js');
+const {fetchProducts} = require('./service/productService.js');
+
 app.use(express.json());
 app.use(require('morgan')('dev'));
+// static routes
 app.use(express.static(path.join(__dirname, "../client/dist")));
 app.get("/", (req, res) =>
   res.sendFile(path.join(__dirname, "../client/dist/index.html"))
@@ -18,32 +35,40 @@ app.get("/", (req, res) =>
 // app routes
 app.get("/api/products", async (req, res, next) => {
   try {
-    const SQL = `
-        SELECT * from products;
-      `;
-    const response = await client.query(SQL);
-    res.send(response.rows);
+    
+    const productResponse = await fetchProducts();
+    res.send(productResponse.rows);
   } catch (ex) {
     next(ex);
   }
 });
 
+
+app.get('/api/users', async (req, res,next) => {
+  try{
+      const userReponse = await fetchUsers();
+      res.send(userReponse.rows);
+  }catch (e) {
+    next(ex)
+  }
+})
+
+
 // init function
 const init = async () => {
   await client.connect();
-  const SQL = `
-      DROP TABLE IF EXISTS products;
-      CREATE TABLE products(
-        id SERIAL PRIMARY KEY,
-        name VARCHAR(50),
-        available BOOLEAN DEFAULT FALSE
-      );
-      INSERT INTO products(name, available) VALUES('computer mouse', true);
-      INSERT INTO products(name, available) VALUES('scifi tumbler', true);
-      INSERT INTO products(name) VALUES('2Tb usb drive');
-    `;
-  await client.query(SQL);
+  //Create TABLES
+  await client.query(SCHEMA);
+
+  //SEEDS USERS && PRODUCTS && SHOULD CART && CART_PRODUCT
+  await seedDb();
   console.log("data seeded");
+
+  const users = await fetchUsers();
+  console.log({users})
+  const products = await fetchProducts();
+  console.log({products})
+
   const port = process.env.PORT || 3000;
   app.listen(port, () => console.log(`listening on port ${port}`));
 };
