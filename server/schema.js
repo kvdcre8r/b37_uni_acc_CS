@@ -18,7 +18,7 @@ CREATE TABLE users(
 );
 CREATE TABLE carts(
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID REFERENCES users(id) NOT NULL,
+  user_id UUID REFERENCES users(id),
   CONSTRAINT unique_user_cart UNIQUE (user_id) -- Unique constraint for user_id in carts
 );
 CREATE TABLE cart_products(
